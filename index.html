@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - EXPLORE SIET</title>
+    <style>
+        body, h1, input, button {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            background-color: white;
+            width: 100%;
+            max-width: 600px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-radius: 10px;
+            box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 70px; /* Extra space for input area on mobile */
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 10px;
+            border-radius: 10px;
+            background-color: #f1f1f1;
+            word-wrap: break-word;
+            animation: fadeIn 0.5s;
+        }
+
+        .message.bot {
+            background-color: #ec3704;
+            color: white;
+            align-self: flex-start;
+        }
+
+        .message.user {
+            background-color: #e1e1e1;
+            align-self: flex-end;
+        }
+
+        .typing-indicator {
+            display: none;
+            font-style: italic;
+            color: #888;
+            align-self: flex-start;
+        }
+
+        .input-area {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-top: 1px solid #eee;
+            background-color: #fff;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .input-area input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+
+        .input-area button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #ec3704;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .input-area button:hover {
+            background-color: #ec3704;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                max-width: 100%;
+                height: 100%;
+            }
+
+            .messages {
+                padding: 15px;
+                padding-bottom: 70px; /* Extra padding for mobile */
+                flex-grow: 1;
+                overflow-y: auto;
+            }
+
+            .input-area input {
+                font-size: 14px; /* Smaller font for input */
+            }
+
+            .input-area button {
+                padding: 8px 15px; /* Smaller button for mobile */
+            }
+        }
+
+        @media (min-width: 601px) {
+            .chat-container {
+                max-width: 600px;
+                height: 80%;
+                margin-top: 20px;
+            }
+
+            .messages {
+                padding: 20px;
+                padding-bottom: 20px;
+            }
+
+            .input-area {
+                position: relative;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="message bot">
+                Hello! I'm the SIET bot. How can I assist you today?
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typing-indicator">Bot is typing...</div>
+
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Ask your question..." />
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <audio id="message-sound" src="sounds.mp3" preload="auto"></audio>
+    <audio id="user-message-sound" src="message.mp3" preload="auto"></audio>
+
+    <script>
+        const memory = {};
+
+        const faq = {
+            "hi": "Hello! how can i help you today?",
+            "fine": "great, let me know how can i assist you.",
+            "hey": "hi! how are you doing?",
+            "i need help": "sure! Do not hesitate to ask me.",
+            "namaste": "namaste ji! kaise hain app?",
+            "me badhiya hu. tum batao": "me bhi thik thak hun!",
+            "jay jagannath": "jay jagannath!",
+            "kemiti achha tame": "Mu badhiya achhi, tame kemiti achha?",
+            "tum kaise ho?": "bas badhiya chal rahi hai jindagi.",
+            "mu b bhala achhi": "achcha hau tahele. Au kn khabar?",
+            "kaise ho tum": "bindaas! tum batao?",
+            "hello": "Hi there! how are you feeing today?",
+            "how can i do for you?": "i am here to assist, you can just chill.",
+            "who are you": "I'm a KIRA powered by Synergyians. I'm here to help you!",
+            "how are you": "I'm just a bot, but I'm ready to assist you. How about you?",
+            "what is ai": "AI, or Artificial Intelligence, is the simulation of human intelligence in machines.",
+            "tell me a joke": "Why don't scientists trust atoms? Because they make up everything!",
+            "how old are you": "I'm as old as the data I was trained on—timeless in a way.",
+            "what is the capital of france": "The capital of France is Paris.",
+            "who is the prime minister of india": "As of now, Shree Narentra modi is our current prime minister."
+        };
+
+        document.getElementById("user-input").addEventListener("focus", adjustForKeyboard);
+        document.getElementById("user-input").addEventListener("blur", resetView);
+
+        function adjustForKeyboard() {
+            const viewportHeight = window.innerHeight;
+            document.querySelector(".chat-container").style.height = `${viewportHeight}px`;
+            const messagesContainer = document.getElementById("messages");
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function resetView() {
+            document.querySelector(".chat-container").style.height = "100vh";
+        }
+
+        function getClosestMatch(userInput, faq) {
+            let bestMatch = "";
+            let highestScore = 0;
+            const questions = Object.keys(faq);
+
+            for (let question of questions) {
+                const similarity = getSimilarity(userInput.toLowerCase(), question.toLowerCase());
+                if (similarity > highestScore) {
+                    highestScore = similarity;
+                    bestMatch = question;
+                }
+            }
+
+            return highestScore > 0.5 ? bestMatch : null;
+        }
+
+        function getSimilarity(a, b) {
+            const matrix = Array.from({ length: a.length + 1 }, (_, i) =>
+                Array(b.length + 1).fill(i ? Infinity : 0)
+            );
+
+            for (let j = 1; j <= b.length; j++) matrix[0][j] = j;
+
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    matrix[i][j] =
+                        a[i - 1] === b[j - 1]
+                            ? matrix[i - 1][j - 1]
+                            : Math.min(
+                                  matrix[i - 1][j] + 1,
+                                  matrix[i][j - 1] + 1,
+                                  matrix[i - 1][j - 1] + 1
+                              );
+                }
+            }
+            return 1 - matrix[a.length][b.length] / Math.max(a.length, b.length);
+        }
+
+        function handleDynamicName(userInput) {
+            const match = userInput.match(/\b(?:i'm|i am|my name is)\b\s+([\w\s]+)/i);
+            return match ? `Hello ${match[1].trim()}. How are you feeling today?` : null;
+        }
+
+        function getBotResponse(userInput) {
+            const dynamicNameResponse = handleDynamicName(userInput);
+            if (dynamicNameResponse) return dynamicNameResponse;
+
+            const closestMatch = getClosestMatch(userInput, faq);
+            if (closestMatch) return faq[closestMatch];
+
+            return "I'm sorry, I couldn't understand that. Could you please rephrase or ask something else?";
+        }
+
+        function playUserMessageSound() {
+            const sound = document.getElementById("user-message-sound");
+            sound.play().catch(() => console.warn("User message sound could not be played."));
+        }
+
+        function handleUserInput() {
+            const userInput = document.getElementById("user-input").value.trim();
+            if (!userInput) return;
+
+            addMessage(userInput, 'user');
+            playUserMessageSound();
+            document.getElementById("user-input").value = '';
+            showTypingIndicator();
+
+            setTimeout(() => {
+                const botResponse = getBotResponse(userInput);
+                addMessage(botResponse, 'bot');
+                playSound();
+                hideTypingIndicator();
+            }, 1000);
+        }
+
+        function addMessage(message, sender) {
+            const messagesContainer = document.getElementById("messages");
+            const messageElement = document.createElement("div");
+            messageElement.classList.add("message", sender);
+            messageElement.textContent = message;
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            document.getElementById("typing-indicator").style.display = "block";
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById("typing-indicator").style.display = "none";
+        }
+
+        function playSound() {
+            const sound = document.getElementById("message-sound");
+            sound.play().catch(() => console.warn("Sound could not be played."));
+        }
+
+        document.getElementById("send-btn").addEventListener("click", handleUserInput);
+        document.getElementById("user-input").addEventListener("keypress", (event) => {
+            if (event.key === "Enter") handleUserInput();
+        });
+    </script>
+</body>
+</html>
